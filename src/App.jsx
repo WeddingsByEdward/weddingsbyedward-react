@@ -146,7 +146,7 @@ function Hero() {
     return () => { cancelAnimationFrame(raf); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); video.removeEventListener("loadedmetadata", onReady); };
   }, [scrub]);
 
-  const src = typeof window !== "undefined" && window.innerWidth <= 900 ? "hero-scrub-mobile.mp4" : "hero-scrub.mp4";
+  const src = typeof window !== "undefined" && window.innerWidth <= 900 ? "hero-scrub-hd-mobile.mp4" : "hero-scrub-hd.mp4";
   const content = (
     <div className="wrap" ref={textRef}>
       <span className="label">Wedding décor · Bengaluru</span>
@@ -170,7 +170,7 @@ function Hero() {
   return (
     <section className="hero-track" id="home" ref={trackRef}>
       <div className="hero hero-sticky">
-        <video ref={videoRef} className="hero-video" src={`${import.meta.env.BASE_URL}videos/${src}`} poster={img("hero-poster.jpg")}
+        <video ref={videoRef} className="hero-video" src={`${import.meta.env.BASE_URL}videos/${src}`} poster={img("hero-poster-hd.jpg")}
           muted playsInline preload="auto" aria-label={HERO_ALT} />
         <div className="hero-shade" ref={shadeRef} aria-hidden="true"></div>
         {content}
