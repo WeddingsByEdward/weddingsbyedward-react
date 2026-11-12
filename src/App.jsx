@@ -93,10 +93,28 @@ function Nav({ menuOpen, setMenuOpen }) {
 }
 
 /* ============ PAGE SECTIONS ============ */
+/* Hero background: video, with the photo as a fallback (reduced motion, data saver, or video can't play) */
+function HeroMedia() {
+  const [useVideo, setUseVideo] = useState(false);
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    const saveData = navigator.connection && navigator.connection.saveData;
+    if (reduceMotion() || saveData) return;
+    setSrc(`${import.meta.env.BASE_URL}videos/${window.innerWidth <= 900 ? "hero-mobile.mp4" : "hero.mp4"}`);
+    setUseVideo(true);
+  }, []);
+  const alt = "Wedding stage with cascading crystal strands, a hanging floral ring, candles and a flower-lined walkway";
+  if (!useVideo) return <img src={img("hero.jpg")} alt={alt} fetchpriority="high" />;
+  return (
+    <video className="hero-video" src={src} poster={img("hero-poster.jpg")} autoPlay muted loop playsInline
+      preload="auto" aria-label={alt} onError={() => setUseVideo(false)} />
+  );
+}
+
 function Hero() {
   return (
     <section className="hero" id="home">
-      <img src={img("hero.jpg")} alt="Wedding stage with cascading crystal strands, a hanging floral ring, candles and a flower-lined walkway" fetchpriority="high" />
+      <HeroMedia />
       <div className="wrap">
         <span className="label">Wedding décor · Bengaluru</span>
         <h1>Your story. <em>Beautifully celebrated.</em></h1>
