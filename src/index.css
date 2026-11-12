@@ -358,3 +358,26 @@
       .planner-actions .btn { flex: 1; text-align: center; }
       .planner legend { font-size: 20px; }
     }
+
+    /* ============ SCROLL-PLAYED HERO VIDEO ============ */
+    .hero-track { position: relative; height: 320vh; }
+    .hero-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; }
+    .hero-sticky::after { display: none; }   /* the shade below replaces the fixed overlay */
+    .hero-shade {
+      position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(to bottom, rgba(62,18,24,.8) 0%, rgba(62,18,24,.25) 22%, rgba(62,18,24,.35) 34%, rgba(62,18,24,.86) 56%, rgba(62,18,24,.95) 100%);
+    }
+    .hero-sticky .wrap { will-change: opacity, transform; }
+    .scroll-hint {
+      position: absolute; z-index: 1; left: 50%; bottom: 24px; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px; color: rgba(250,246,239,.75);
+      font-size: 10px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; transition: opacity .4s ease;
+    }
+    .scroll-hint i { width: 1px; height: 36px; background: linear-gradient(var(--gold), transparent); animation: hintDrop 1.8s ease-in-out infinite; }
+    @keyframes hintDrop { 0% { transform: scaleY(0); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } 51% { transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+    @media (max-width: 600px) {
+      .hero-track { height: 260vh; }
+      .hero-sticky { height: 100vh; height: 100svh; min-height: 0; }
+      .hero-sticky .wrap { padding-top: 96px; padding-bottom: 72px; }
+      .scroll-hint { bottom: 14px; }
+    }

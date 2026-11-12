@@ -41,7 +41,9 @@ function Nav({ menuOpen, setMenuOpen }) {
   useEffect(() => {
     const onScroll = () => {
       const hero = document.getElementById("home");
-      setSolid(window.scrollY > (hero?.offsetHeight ?? 600) - 100);
+      // with the scroll-played hero, switch once the video section has scrolled past
+      const end = hero?.classList.contains("hero-track") ? hero.offsetHeight - window.innerHeight - 40 : (hero?.offsetHeight ?? 600) - 100;
+      setSolid(window.scrollY > end);
       const y = window.scrollY + window.innerHeight * 0.4;
       let cur = "home";
       NAV.forEach(({ id }) => { const s = document.getElementById(id); if (s && s.offsetTop <= y) cur = id; });
@@ -93,36 +95,86 @@ function Nav({ menuOpen, setMenuOpen }) {
 }
 
 /* ============ PAGE SECTIONS ============ */
-/* Hero background: video, with the photo as a fallback (reduced motion, data saver, or video can't play) */
-function HeroMedia() {
-  const [useVideo, setUseVideo] = useState(false);
-  const [src, setSrc] = useState("");
-  useEffect(() => {
-    const saveData = navigator.connection && navigator.connection.saveData;
-    if (reduceMotion() || saveData) return;
-    setSrc(`${import.meta.env.BASE_URL}videos/${window.innerWidth <= 900 ? "hero-mobile.mp4" : "hero.mp4"}`);
-    setUseVideo(true);
-  }, []);
-  const alt = "Wedding stage with cascading crystal strands, a hanging floral ring, candles and a flower-lined walkway";
-  if (!useVideo) return <img src={img("hero.jpg")} alt={alt} fetchpriority="high" />;
-  return (
-    <video className="hero-video" src={src} poster={img("hero-poster.jpg")} autoPlay muted loop playsInline
-      preload="auto" aria-label={alt} onError={() => setUseVideo(false)} />
-  );
-}
+/* ============ HERO: the video plays frame by frame as you scroll ============ */
+const HERO_ALT = "Wedding stage with cascading crystal strands, a hanging floral ring, candles and a flower-lined walkway";
 
 function Hero() {
+  // Scroll-play is skipped for "reduce motion" and data-saver users: they get the still photo.
+  const [scrub, setScrub] = useState(() => typeof window !== "undefined" && !reduceMotion() && !(navigator.connection && navigator.connection.saveData));
+  const trackRef = useRef(null);
+  const videoRef = useRef(null);
+  const textRef = useRef(null);
+  const shadeRef = useRef(null);
+  const hintRef = useRef(null);
+
+  useEffect(() => {
+    if (!scrub) return;
+    const video = videoRef.current, track = trackRef.current;
+    let target = 0, current = 0, raf = 0, ready = false;
+
+    const progress = () => {
+      const r = track.getBoundingClientRect();
+      const total = track.offsetHeight - window.innerHeight;
+      return Math.min(1, Math.max(0, -r.top / Math.max(total, 1)));
+    };
+    const onScroll = () => {
+      const p = progress();
+      if (ready && video.duration) target = p * (video.duration - 0.05);
+      // Text and shading ease away so the stage takes over the screen
+      const fade = Math.min(1, p / 0.35);
+      if (textRef.current) { textRef.current.style.opacity = String(1 - fade); textRef.current.style.transform = `translateY(${-30 * fade}px)`; textRef.current.style.visibility = fade >= 1 ? "hidden" : "visible"; }
+      if (shadeRef.current) shadeRef.current.style.opacity = String(1 - 0.6 * fade);
+      if (hintRef.current) hintRef.current.style.opacity = String(p > 0.03 ? 0 : 1);
+    };
+    const tick = () => {
+      if (ready && !video.seeking) {
+        current += (target - current) * 0.25;            // smooth the movement between frames
+        if (Math.abs(video.currentTime - current) > 1 / 48) video.currentTime = current;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    const onReady = () => { ready = true; onScroll(); };
+    video.addEventListener("loadedmetadata", onReady);
+    if (video.readyState >= 1) onReady();
+    // iPhones only allow seeking after the video has been "started" once
+    video.play().then(() => video.pause()).catch(() => {});
+    video.addEventListener("error", () => setScrub(false));
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    onScroll();
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); video.removeEventListener("loadedmetadata", onReady); };
+  }, [scrub]);
+
+  const src = typeof window !== "undefined" && window.innerWidth <= 900 ? "hero-scrub-mobile.mp4" : "hero-scrub.mp4";
+  const content = (
+    <div className="wrap" ref={textRef}>
+      <span className="label">Wedding décor · Bengaluru</span>
+      <h1>Your story. <em>Beautifully celebrated.</em></h1>
+      <p>Mandaps, stages and florals for muhurthams, nikahs, church weddings and receptions, designed around you and your family.</p>
+      <div className="hero-actions">
+        <a href="#portfolio" className="btn btn-gold" onClick={(e) => { e.preventDefault(); scrollToId("portfolio"); }}>See Our Work</a>
+        <a href="#contact" className="text-link" onClick={(e) => { e.preventDefault(); scrollToId("contact"); }}>Plan Your Wedding</a>
+      </div>
+    </div>
+  );
+
+  if (!scrub) {
+    return (
+      <section className="hero" id="home">
+        <img src={img("hero.jpg")} alt={HERO_ALT} fetchpriority="high" />
+        {content}
+      </section>
+    );
+  }
   return (
-    <section className="hero" id="home">
-      <HeroMedia />
-      <div className="wrap">
-        <span className="label">Wedding décor · Bengaluru</span>
-        <h1>Your story. <em>Beautifully celebrated.</em></h1>
-        <p>Mandaps, stages and florals for muhurthams, nikahs, church weddings and receptions, designed around you and your family.</p>
-        <div className="hero-actions">
-          <a href="#portfolio" className="btn btn-gold" onClick={(e) => { e.preventDefault(); scrollToId("portfolio"); }}>See Our Work</a>
-          <a href="#contact" className="text-link" onClick={(e) => { e.preventDefault(); scrollToId("contact"); }}>Plan Your Wedding</a>
-        </div>
+    <section className="hero-track" id="home" ref={trackRef}>
+      <div className="hero hero-sticky">
+        <video ref={videoRef} className="hero-video" src={`${import.meta.env.BASE_URL}videos/${src}`} poster={img("hero-poster.jpg")}
+          muted playsInline preload="auto" aria-label={HERO_ALT} />
+        <div className="hero-shade" ref={shadeRef} aria-hidden="true"></div>
+        {content}
+        <div className="scroll-hint" ref={hintRef} aria-hidden="true"><span>Scroll</span><i></i></div>
       </div>
     </section>
   );
